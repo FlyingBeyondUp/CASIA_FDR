@@ -8,6 +8,7 @@ Created on Tue Dec 17 20:11:25 2024
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import rv_continuous
+from scipy.stats import norm
 
 class Spiky(rv_continuous):
     def _pdf(self, x):
@@ -22,8 +23,14 @@ class Skew(rv_continuous):
         return 1/4*getGaussian(x, -2,2**2)+1/4*getGaussian(x,-1, 1.5**2)+1/3*getGaussian(x,0, 1**2)+1/6*getGaussian(x,1, 1)
 
 class BigNormal(rv_continuous):
-    def _pdf(self, x):
-        return getGaussian(x,0,4**2)
+    def _init__(self,name=''):
+        return
+    def rvs(self, size):
+        return 4*np.random.randn(size)
+    def pdf(self,list_beta):
+        return (1 / (np.sqrt(2 * np.pi * 16))) * np.exp(-list_beta**2 / (2 * 16))
+    def cdf(self,list_beta):
+        return norm.cdf(list_beta,loc=0,scale=4)
 
 class Bimodal(rv_continuous):
     def _pdf(self, x):
@@ -33,9 +40,15 @@ class FlatTop(rv_continuous):
      def _pdf(self, x):
          return 1/7*(getGaussian(x, -1.5,0.5**2)+getGaussian(x, -1,0.5**2)+getGaussian(x, -0.5,0.5**2)+getGaussian(x, 0,0.5**2)+getGaussian(x, 0.5,0.5**2)+getGaussian(x, 1,0.5**2)+getGaussian(x, 1.5,0.5**2))
 
-class StandardNormal(rv_continuous):
-    def _pdf(self, x):
-        return getGaussian(x, 0, 1)
+class StandardNormal():
+    def _init__(self,name=''):
+        return
+    def rvs(self, size):
+        return np.random.randn(size)
+    def pdf(self,list_beta):
+        return (1 / (np.sqrt(2 * np.pi))) * np.exp(-list_beta**2 /2)
+    def cdf(self,list_beta):
+        return norm.cdf(list_beta,loc=0,scale=1)
 
 
 def getGaussian(x, mu, sigma_sq):
