@@ -66,15 +66,18 @@ list_true_pi0=np.linspace(0, 1,11)
 dict_pi0_normal,dict_pi0_uniform={title:[] for title in titles },{title:[] for title in titles }
 dict_lfdr_normal,dict_lfsr_normal={title:[] for title in titles },{title:[] for title in titles }
 
-dict_true_margin,dict_true_lfdr={},{}
+dict_true_margin,dict_true_lfdr,dict_true_lfsr={},{},{}
 for i in range(len(titles)):
     for j in range(0,len(list_true_pi0)):
-        true_margin=np.zeros_like(list_beta)
+        true_margin,true_lfsr=np.zeros_like(list_beta),np.zeros_like(list_beta)
         for k in range(0,len(list_beta)):
             true_margin[k]=list_true_pi0[j]*getGaussian(list_beta[k], 0, list_s[k]**2)+(1-list_true_pi0[j])*np.sum(getGaussian(list_beta[k], list_beta,list_s[k]**2)*list_prior[i].pdf(list_beta))*(12/len(list_beta))
+            true_lfsr[k]=(1-list_true_pi0[j])*np.min([np.sum(list_prior[i].pdf(list_beta[list_beta>0])*getGaussian(list_beta[k],list_beta[list_beta>0],list_s[k])),np.sum(list_prior[i].pdf(list_beta[list_beta<0])*getGaussian(list_beta[k],list_beta[list_beta<0],list_s[k]))])*12/len(list_beta)
         true_lfdr=getGaussian(list_beta, 0, list_s**2)*list_true_pi0[j]/true_margin
+        true_lfsr=true_lfsr/true_margin+true_lfdr
         dict_true_lfdr[(i,j)],dict_true_margin[(i,j)]=true_lfdr,true_margin
-
+        dict_true_lfsr[(i,j)]=true_lfsr
+        
 for i in range(0,len(list_prior)):
     print(titles[i])
     for true_pi0 in list_true_pi0:
@@ -101,9 +104,7 @@ for i in range(0,len(list_prior)):
         dict_lfdr_normal[titles[i]].append(mean_lfdr)
         dict_pi0_normal[titles[i]].append((np.max(list_pi0_normal),np.mean(list_pi0_normal),np.min(list_pi0_normal)))
         dict_pi0_uniform[titles[i]].append((np.max(list_pi0_uniform),np.mean(list_pi0_uniform),np.min(list_pi0_uniform)))
-# plt.scatter(list_true_pi0,dict_pi0_normal['spiky'],color='green',facecolors='none')
-# plt.scatter(list_true_pi0,dict_pi0_uniform['spiky'],color='purple',facecolors='none')
-# plt.plot(list_true_pi0,list_true_pi0,color='black')
+
 num_subfigures = 6
 fig, axes = plt.subplots(1, num_subfigures, figsize=(num_subfigures*3, 6))
 y_min, y_max = 0, 1
@@ -124,39 +125,13 @@ fig.text(0.5, 0.001, r'true $\pi_0$', ha='center')
 fig.text(0.004, 0.5, r'estimated $\pi_0$', va='center', rotation='vertical')
 plt.savefig('estimated_pi0 vs true pi0.pdf',bbox_inches='tight')
 
-plt.plot(list_beta,dict_lfdr_normal[titles[0]][4],label='estimated')
-plt.plot(list_beta,true_lfdr,label='true')
-plt.legend()
-
-plt.plot(list_beta,marginal_p,label='estimated')
-plt.plot(list_beta,dict_true_margin[(i,j)],label='true')
-plt.legend()
-
-plt.plot(list_beta,lfdr,label='estimated')
-plt.plot(list_beta,dict_true_lfdr[(0,1)],label='true')
-plt.legend()
-
-estimated_prior=newDeal_normal.priorProb(list_beta)
-true_prior=list_true_pi0[j]*getGaussian(list_beta,0,(0.01*delta_x)**2)+(1-list_true_pi0[j])*list_prior[i].pdf(list_beta)
-plt.plot(list_beta,estimated_prior,label='estimated')
-plt.plot(list_beta,true_prior,label='true')
-plt.legend()
-
-plt.plot(list_beta,lfdr,label='lfdr')
-plt.plot(list_beta,lfsr,label='lfsr')
-plt.legend()
 
 num_subfigures = 6
 fig, axes = plt.subplots(1, num_subfigures, figsize=(num_subfigures*3, 6))
 y_min, y_max = 0, 1
 # Plot each subfigure
 for i in range(num_subfigures):
-    for j in range(0,len(list_true_pi0)):
-        # true_margin=np.zeros_like(list_beta)
-        # for k in range(0,len(list_beta)):
-        #     true_margin[k]=list_true_pi0[j]*getGaussian(list_beta[k], 0, list_s[k]**2)+(1-list_true_pi0[j])*np.sum(getGaussian(list_beta[k], list_beta,list_s[k]**2)*list_prior[i].pdf(list_beta))*(12/len(list_beta))
-        # true_lfdr=getGaussian(list_beta, 0, list_s**2)*(list_true_pi0[j]+(1-list_true_pi0[j])*list_prior[i].pdf(0))/true_margin
-        # dict_true_lfdr[(i,j)],dict_true_margin=true_lfdr,true_margin
+    for j in range(2,len(list_true_pi0)):
         plot_until=np.argmax(dict_true_lfdr[(i,j)]>=0.2)
         axes[i].scatter(dict_true_lfdr[(i,j)][0:plot_until],dict_lfdr_normal[titles[i]][j][0:plot_until],color='green',s=1)                
         axes[i].plot(dict_true_lfdr[(i,j)][0:plot_until],dict_true_lfdr[(i,j)][0:plot_until],color='black')
@@ -174,10 +149,34 @@ fig.text(0.004, 0.5, r'estimated lfdr', va='center', rotation='vertical')
 plt.savefig('estimated lfdr vs true lfdr.pdf',bbox_inches='tight')
 
 
+num_subfigures = 6
+fig, axes = plt.subplots(1, num_subfigures, figsize=(num_subfigures*3, 6))
+y_min, y_max = 0, 1
+# Plot each subfigure
+for i in range(num_subfigures):
+    for j in range(2,len(list_true_pi0)):
+        plot_until=np.argmax(dict_true_lfsr[(i,j)]>=0.2)
+        axes[i].scatter(dict_true_lfsr[(i,j)][0:plot_until],dict_lfsr_normal[titles[i]][j][0:plot_until],color='green',s=1)                
+        axes[i].plot(dict_true_lfsr[(i,j)][0:plot_until],dict_true_lfsr[(i,j)][0:plot_until],color='black')
+        axes[i].plot(dict_true_lfsr[(i,j)][0:plot_until],2*dict_true_lfsr[(i,j)][0:plot_until],color='red')
+    axes[i].set_title(titles[i])
+    axes[i].set_aspect(aspect='auto')
+    axes[i].set_ylim(y_min, y_max)
+    axes[i].set_xlim(0,0.2)
+for ax in axes[1:]:
+    ax.set_yticklabels([])
+# Adjust layout to prevent overlap
+plt.tight_layout()
+fig.text(0.5, 0.001, r'true lfsr', ha='center')
+fig.text(0.004, 0.5, r'estimated lfsr', va='center', rotation='vertical')
+plt.savefig('estimated lfsr vs true lfsr.pdf',bbox_inches='tight')
+
+
 true_pi0=0.3
 dict_true_cdf,dict_estimated_cdf={},{}
 delta_x=12/len(list_beta)
 for i in range(len(titles)):
+    print(titles[i])
     dict_true_cdf[titles[i]]=(1-true_pi0)*list_prior[i].cdf(list_beta)+true_pi0*(list_beta>0)
     average_estimated_g=np.zeros_like(list_beta)
     for n in range(n_dataset):
@@ -191,8 +190,8 @@ fig, axes = plt.subplots(1, num_subfigures, figsize=(num_subfigures*3, 6))
 y_min, y_max = 0, 1
 # Plot each subfigure
 for i in range(num_subfigures):
-    axes[i].plot(list_beta,dict_true_cdf[titles[i]],color='black',label='true')
-    axes[i].plot(list_beta,dict_estimated_cdf[titles[i]],color='red',label='ash normal')
+    axes[i].plot(list_beta,dict_estimated_cdf[titles[i]],color='blue',label='ash normal')
+    axes[i].plot(list_beta,dict_true_cdf[titles[i]],color='red',label='true')
     axes[i].set_title(titles[i])
     axes[i].set_aspect(aspect='auto')
     axes[i].set_ylim(y_min, y_max)
@@ -203,6 +202,60 @@ for ax in axes[1:]:
 plt.tight_layout()
 fig.text(0.5, 0.001, r'z', ha='center')
 fig.text(0.004, 0.5, r'cdf', va='center', rotation='vertical')
+
+
+
+###############################################################################
+# test the influence of point mass at origin
+additional_lfsr_normal={title:[] for title in titles}
+for i in range(0,len(list_prior)):
+    print(titles[i])
+    for true_pi0 in list_true_pi0:
+        print(true_pi0)
+        mean_lfsr=np.zeros_like(list_beta)
+        for n in range(n_dataset):
+            observed_beta=generateData(list_prior[i],signal_strength=1,signal_ratio=1-true_pi0,n_data=n_data)
+            newDeal_normal=NewDeal(observed_beta, list_s,origin_point_mass=False)
+            
+            list_pi_normal,list_log_likelihood,omega=newDeal_normal.fit(n_iter=500,lambda_0=10)
+            
+            marginal_p,null_component,alternative_component,lfdr,lfsr=newDeal_normal.solve(list_beta,list_s)
+            mean_lfsr+=lfsr
+        mean_lfsr=mean_lfsr/n_dataset
+        
+        additional_lfsr_normal[titles[i]].append(mean_lfsr)
+
+num_subfigures = 6
+fig, axes = plt.subplots(1, num_subfigures, figsize=(num_subfigures*3, 6))
+y_min, y_max = 0, 1
+# Plot each subfigure
+for i in range(num_subfigures):
+    for j in range:
+        plot_until=np.argmax(dict_true_lfsr[(i,j)]>=0.2)
+        axes[i].scatter(dict_true_lfsr[(i,j)][0:plot_until],additional_lfsr_normal[titles[i]][j][0:plot_until],color='green',s=1)                
+        axes[i].plot(dict_true_lfsr[(i,j)][0:plot_until],dict_true_lfsr[(i,j)][0:plot_until],color='black')
+        axes[i].plot(dict_true_lfsr[(i,j)][0:plot_until],2*dict_true_lfsr[(i,j)][0:plot_until],color='red')
+    axes[i].set_title(titles[i])
+    axes[i].set_aspect(aspect='auto')
+    axes[i].set_ylim(y_min, y_max)
+    axes[i].set_xlim(0,0.2)
+for ax in axes[1:]:
+    ax.set_yticklabels([])
+# Adjust layout to prevent overlap
+plt.tight_layout()
+fig.text(0.5, 0.001, r'true lfsr', ha='center')
+fig.text(0.004, 0.5, r'estimated lfsr', va='center', rotation='vertical')
+plt.savefig('without point mass for data and estimation, estimated lfsr vs true lfsr.pdf',bbox_inches='tight')
+
+###############################################################################
+
+
+
+
+
+good_observation=generateData(prior=StandardNormal(), signal_ratio=0.5,noise_sigma=1)
+poor_observation=generateData(prior=StandardNormal(), signal_ratio=0.5,noise_sigma=10)
+combined=np.array(list(good_observation)+list(poor_observation))
 
 # n_iter=20
 # true_pi0=0.2
