@@ -30,7 +30,7 @@ class NewDeal:
         self.data=observed_data
         self.list_s=list_s
         self.prior_type=prior_type
-        self.delta_x=12/observed_data.shape[0]
+        self.delta_x=12/2e4
         self.origin_point_mass=origin_point_mass
 
         if prior_type=='normal':
@@ -102,17 +102,19 @@ class NewDeal:
         alternative_component=marginal_p-null_component
         
         lfsr=[]
-        list_positive_beta,list_negative_beta=list_beta[list_beta>=self.delta_x],list_beta[list_beta<=-self.delta_x]
+        list_positive_beta,list_negative_beta=np.linspace(0,6,10000),np.linspace(-6,0,10000)
         for j in range(0,len(list_beta)):
-            Prob_positive=np.sum([self.list_pi[k]*np.sum(self.f_prior(list_positive_beta,self.grid[k])*getGaussian(list_beta[j],list_positive_beta,list_s[j]))*self.delta_x for k in range(0,len(self.list_pi))])
-            Prob_negative=np.sum([self.list_pi[k]*np.sum(self.f_prior(list_negative_beta,self.grid[k])*getGaussian(list_beta[j],list_negative_beta,list_s[j]))*self.delta_x for k in range(0,len(self.list_pi))])
+            Prob_positive=np.sum([self.list_pi[k]*np.sum(self.f_prior(list_positive_beta,self.grid[k])*getGaussian(list_beta[j],list_positive_beta,list_s[j]))*self.delta_x for k in range(int(self.origin_point_mass),len(self.list_pi))])
+            Prob_negative=np.sum([self.list_pi[k]*np.sum(self.f_prior(list_negative_beta,self.grid[k])*getGaussian(list_beta[j],list_negative_beta,list_s[j]))*self.delta_x for k in range(int(self.origin_point_mass),len(self.list_pi))])
             lfsr.append(np.min([Prob_positive,Prob_negative])/marginal_p[j]+lfdr[j])
         return marginal_p,null_component,alternative_component,lfdr,lfsr
+    
     def priorCDF(self,list_beta):
         g=np.zeros_like(list_beta)
-        for k in range(self.list_pi):
+        for k in range(len(self.list_pi)):
             g+=self.list_pi[k]*norm.cdf(list_beta,loc=0,scale=self.grid[k])
         return g
+    
 
 
 
